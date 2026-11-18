@@ -1,0 +1,10 @@
+{
+  "place": "bottom",
+  "size": 1,
+  "title": "Resurrect",
+  "overlay": {
+    "kind": "dialog",
+    "width": 560,
+    "height": 420
+  }
+}
