@@ -1,62 +1,60 @@
-# herdr-app-resurrect
+# herdr-app-mods
 
-[Resurrect](mods/resurrect/) is a [Herdr app](https://herdr.dev) mod that
-auto-saves and auto-resumes your coding-agent sessions:
+Mods for the [Herdr app](https://herdr.dev) — the GPUI desktop app for
+terminals and coding agents. Each folder under `mods/` is one
+self-contained mod: copy it into `~/.config/herdr-app/mods/` and it runs
+(`herdr-app check` to verify). Install one or all.
 
-- **Auto-save**: every Herdr live-data change, it records which agent runs
-  in each pane (agent, argv, cwd, machine, session id) — persisted in the
-  mod's storage, surviving app and machine restarts.
-- **Auto-resume**: herdr-core keeps terminals alive across crashes and
-  reboots by replacing a lost program with a shell in the same folder.
-  Resurrect detects exactly that recovery and types the agent's own resume
-  command back into the pane — `claude --resume <id>`,
-  `pi --session <id>`, `codex resume <id>` — so the conversation continues
-  where it was. Agents you exit normally are never relaunched.
-- **Manual panel**: `mod.open resurrect` (command palette) lists tracked
-  panes with per-row and bulk **Resume**, for agents lost while the app was
-  closed.
+## Mods
 
-It is the herdr-app counterpart of the TUI's `resume_agents_on_restore`
-and the `herdr-resurrect` TUI plugin.
+| Mod | What it does | More |
+|---|---|---|
+| [resurrect](mods/resurrect/) | Remembers which coding agent ran in each pane and resumes it in place after a crash or reboot (`claude --resume <id>`, `pi --session <id>`); manual recovery panel. | [RECIPE](mods/resurrect/RECIPE.md) · [preview](mods/resurrect/preview.png) |
+| [file-picker](mods/file-picker/) | fd-backed file/directory picker that inserts paths into the focused terminal **without pressing Enter**, `@`-prefixed for agents; git-root and zoxide variants. | [RECIPE](mods/file-picker/RECIPE.md) · [preview](mods/file-picker/preview.png) |
 
 ## Install
 
+One mod:
+
 ```sh
-git clone https://github.com/shivammehta25/herdr-app-resurrect
-cp -r herdr-app-resurrect/mods/resurrect ~/.config/herdr-app/mods/
-herdr-app check ~/.config/herdr-app/mods/resurrect
+git clone https://github.com/shivammehta25/herdr-app-mods
+cp -r herdr-app-mods/mods/<name> ~/.config/herdr-app/mods/
+herdr-app check ~/.config/herdr-app/mods/<name>
 ```
 
 On Windows, the mods folder is `%APPDATA%\herdr-app\mods\`.
 
-### Configure
+All mods:
 
-Copy `mods/resurrect/config.json.example` to `mods/resurrect/config.json`
-(same folder) to tune or extend without editing the mod:
+```sh
+for d in herdr-app-mods/mods/*/; do cp -r "$d" ~/.config/herdr-app/mods/; done
+```
 
-- `watchMs`, `settleMs`, `pruneMs` — cadence, settle delay, memory time.
-- `agents` — add or replace an agent's resume flags:
-  `"myagent": { "bin": "myagent", "resume": ["--resume", "{v}"], "cont": ["--continue"] }`.
-- `match` — extra process names that report a known agent (wrapper
-  scripts): `"claude": ["claude-x"]`.
+Both mods here self-dock an invisible 1 px strip (`mod.json`:
+`place: bottom`, `size: 1`) so nothing needs layout editing. Open from
+the command palette (`mod.open <name>`) or bind mod commands in
+`keys.json`, e.g.:
 
-Changes apply the next time Herdr starts (or the mod reloads).
+```json
+{ "global": { "ctrl-alt-p": "file-picker.pick", "ctrl-alt-g": "file-picker.pick-git-root",
+              "ctrl-alt-d": "file-picker.pick-dirs", "ctrl-alt-z": "file-picker.pick-zoxide" } }
+```
 
-The worker docks itself as an invisible 1 px strip at the bottom of the
-layout (`mod.json`: `place: bottom`, `size: 1`), so no layout editing is
-needed. If you keep your mods in a dotfiles repo with symlinks, restart
-Herdr after edits — symlinked mod folders do not hot-reload (terminals
-keep running in herdr-core while the app restarts).
+`resurrect.save` / `resurrect.restore` work the same way.
 
-Supported agents: claude, codex, pi, omp, copilot, gemini, cursor,
-devin, droid, kimi, mastracode, hermes, opencode, qodercli, qwen, kilo,
-grok. Session ids are taken from the running agent's argv when present,
-else resolved from the agent CLI's own on-disk session store (newest for
-the pane's cwd, on the terminal's machine).
+Mods are trusted code: they run programs, read files and use the local
+clipboard. Read `main.js` before installing; each mod's RECIPE.md lists
+exactly what it runs. If you keep your mods in a dotfiles repo with
+symlinks, restart Herdr after edits — symlinked mod folders do not
+hot-reload (terminals keep running in herdr-core while the app restarts).
 
-See [RECIPE.md](RECIPE.md) for the full build recipe, and
-[preview.png](preview.png) for what the panel looks like.
+## Adding a mod
+
+Keep the shape: `mods/<name>/{main.js, mod.json, RECIPE.md, preview.png}`
+(+ `config.json.example` if configurable). The root README's table is the
+index. `herdr-app check mods/<name>` must pass before committing.
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE) — one license for the repo; per-mod headers may carry
+their own (both current mods also credit their upstreams in RECIPE.md).

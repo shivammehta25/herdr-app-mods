@@ -1,0 +1,11 @@
+{
+  "place": "bottom",
+  "title": "File Picker",
+  "overlay": {
+    "kind": "dialog",
+    "width": 760,
+    "height": 480
+  },
+  "focusable": true,
+  "size": 1
+}
