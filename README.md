@@ -22,7 +22,7 @@ and the `herdr-resurrect` TUI plugin.
 ## Install
 
 ```sh
-git clone https://github.com/<you>/herdr-app-resurrect
+git clone https://github.com/shivammehta25/herdr-app-resurrect
 cp -r herdr-app-resurrect/mods/resurrect ~/.config/herdr-app/mods/
 herdr-app check ~/.config/herdr-app/mods/resurrect
 ```
