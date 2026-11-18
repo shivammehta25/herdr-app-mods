@@ -27,7 +27,7 @@
 
 import { View, div } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
-import { checking, exec, hc, home, notify, props, terminals, theme } from "herdr";
+import { appHome, checking, exec, hc, home, notify, props, readTextFile, terminals, theme } from "herdr";
 
 const WATCH_MS = 30_000; // how often the store is rewritten, even without changes
 const SETTLE_MS = 2_000; // let the recovered shell finish starting before typing
@@ -64,6 +64,39 @@ const LOST = new Set(["holder_lost", "stopped_by_restart", "host_shutdown", "ser
 // Shell process names: the pane's idle state.
 const SHELLS = new Set(["zsh", "bash", "sh", "dash", "ksh", "fish", "nu", "pwsh", "powershell"]);
 
+// ---- user config -----------------------------------------------------------
+// A config.json beside main.js overrides defaults without editing the mod:
+// {
+//   "watchMs": 30000, "settleMs": 2000, "pruneMs": 604800000,
+//   "agents": { "claude": { "resume": ["--resume", "{v}"], "cont": ["--continue"] } },
+//   "agentBins": { "cursor": "cursor-agent" }
+// }
+// `agents` entries replace a built-in agent entirely or add new ones:
+// name -> { "bin"?: string, "resume": ["--resume", "{v}"], "cont": ["--continue"] }.
+// Extra process names that report the agent (wrappers) go in "match": ["claude-x"].
+let CONFIG = {
+  watchMs: WATCH_MS, settleMs: SETTLE_MS, pruneMs: PRUNE_MS,
+  agents: {}, match: {},
+};
+async function loadConfig() {
+  try {
+    const text = await readTextFile(`${appHome()}/mods/resurrect/config.json`);
+    if (!text) return;
+    const user = JSON.parse(text);
+    CONFIG = {
+      watchMs: numberOr(user.watchMs, WATCH_MS),
+      settleMs: numberOr(user.settleMs, SETTLE_MS),
+      pruneMs: numberOr(user.pruneMs, PRUNE_MS),
+      agents: user.agents ?? {},
+      match: user.match ?? {},
+    };
+    for (const [name, spec] of Object.entries(CONFIG.agents)) {
+      if (spec) KNOWN[name.toLowerCase()] = { resume: spec.resume ?? [], cont: spec.cont ?? [], bin: spec.bin };
+    }
+  } catch { /* no config or invalid: defaults stand */ }
+}
+const numberOr = (v, d) => (typeof v === "number" && v > 0 ? v : d);
+
 const read = (key, fallback) => {
   try { return JSON.parse(localStorage.getItem(key) ?? "null") ?? fallback; } catch { return fallback; }
 };
@@ -91,7 +124,12 @@ function agentOf(fg) {
   const name = String(fg?.name ?? "").toLowerCase();
   if (KNOWN[name]) return name;
   const argv0 = String(fg?.argv?.[0] ?? "").split("/").pop().toLowerCase();
-  return KNOWN[argv0] ? argv0 : null;
+  if (KNOWN[argv0]) return argv0;
+  // User-declared process names that report an agent (wrapper scripts).
+  for (const [agent, names] of Object.entries(CONFIG.match)) {
+    if (names?.includes?.(name) || names?.includes?.(argv0)) return agent.toLowerCase();
+  }
+  return null;
 }
 
 function machineOf(address) {
@@ -144,8 +182,11 @@ export default class Resurrect extends View {
     this.sent = new Set(); // auto-resume attempts this app run
     this.panel = Boolean(props()?.overlay); // overlay copies are the panel
     if (this.panel) return; // the worker runs in the layout copy
-    this.observe(cx); // first scan at once
-    cx.timer.every(WATCH_MS, (cx) => this.observe(cx));
+    cx.spawn(async (cx) => {
+      await loadConfig();
+      this.observe(cx); // first scan at once, with config loaded
+      cx.timer.every(CONFIG.watchMs, (cx) => this.observe(cx));
+    });
   }
 
   // The state machine. Synchronous and cheap, so it runs on every live-data
@@ -202,7 +243,7 @@ export default class Resurrect extends View {
         this.watch[t.address] = { ...rec, lost: false, at: now };
         dirty = true;
         cx.spawn(async (cx) => {
-          await new Promise((ok) => cx.timer.after(SETTLE_MS, ok)); // shell settles
+          await new Promise((ok) => cx.timer.after(CONFIG.settleMs, ok)); // shell settles
           await this.resume(t.address, rec);
           cx.notify();
         });
@@ -212,7 +253,7 @@ export default class Resurrect extends View {
     // Forget entries whose terminals have been gone for a week.
     const live = new Set(list.map((t) => t.address));
     for (const [addr, rec] of Object.entries(this.watch)) {
-      if (!live.has(addr) && now - (rec.at ?? 0) > PRUNE_MS) {
+      if (!live.has(addr) && now - (rec.at ?? 0) > CONFIG.pruneMs) {
         delete this.watch[addr];
         dirty = true;
       }

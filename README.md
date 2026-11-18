@@ -27,6 +27,21 @@ cp -r herdr-app-resurrect/mods/resurrect ~/.config/herdr-app/mods/
 herdr-app check ~/.config/herdr-app/mods/resurrect
 ```
 
+On Windows, the mods folder is `%APPDATA%\herdr-app\mods\`.
+
+### Configure
+
+Copy `mods/resurrect/config.json.example` to `mods/resurrect/config.json`
+(same folder) to tune or extend without editing the mod:
+
+- `watchMs`, `settleMs`, `pruneMs` — cadence, settle delay, memory time.
+- `agents` — add or replace an agent's resume flags:
+  `"myagent": { "bin": "myagent", "resume": ["--resume", "{v}"], "cont": ["--continue"] }`.
+- `match` — extra process names that report a known agent (wrapper
+  scripts): `"claude": ["claude-x"]`.
+
+Changes apply the next time Herdr starts (or the mod reloads).
+
 The worker docks itself as an invisible 1 px strip at the bottom of the
 layout (`mod.json`: `place: bottom`, `size: 1`), so no layout editing is
 needed. If you keep your mods in a dotfiles repo with symlinks, restart

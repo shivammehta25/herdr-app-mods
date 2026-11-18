@@ -1,0 +1,11 @@
+{
+  "watchMs": 30000,
+  "settleMs": 2000,
+  "pruneMs": 604800000,
+  "agents": {
+    "myagent": { "bin": "myagent", "resume": ["--resume", "{v}"], "cont": ["--continue"] }
+  },
+  "match": {
+    "claude": ["claude-x", "my-claude-wrapper"]
+  }
+}

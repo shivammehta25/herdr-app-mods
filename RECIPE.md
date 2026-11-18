@@ -40,7 +40,9 @@ solid **Resume all** button.
   codex (`resume <id>` / `resume --last`), pi and omp (`--session <id>` /
   `--continue` / `--resume=<id>`), copilot, gemini, cursor (cursor-agent),
   devin, droid, kimi, mastracode, hermes, opencode, qodercli, qwen, kilo,
-  grok.
+  grok. A `config.json` beside main.js (see `config.json.example`) adds or
+  replaces agents, declares wrapper process names, and tunes the timings,
+  so the mod itself never needs editing.
 - **Resume** on a row and **Resume all** type the same command on demand —
   for agents lost while the app was closed, or plain programs (tracked,
   never auto-rerun).
@@ -56,7 +58,8 @@ solid **Resume all** button.
   on every render and on a 30 s `cx.timer.every`; overlay copies (the
   panel) render the list. State persists in `localStorage`
   (`data/resurrect/store.json`), surviving app restarts.
-- Herdr module functions: `terminals()` for live records, `hc()` to
+- Herdr module functions: `terminals()` for live records, `readTextFile()`
+  + `appHome()` for config.json, `hc()` to
   `hc send <address> <command>`, `exec()` to look up session ids in the
   agent CLIs' on-disk stores (claude `~/.claude/projects/<munged cwd>`,
   pi/omp `~/.pi/agent/sessions/<munged cwd>`, codex `~/.codex/sessions`),
